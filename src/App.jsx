@@ -29,7 +29,7 @@ const parseApiResponse = async (res) => {
   }
 };
 
-const CHART_COLORS = ["#00d4ff","#7c4dff","#00e676","#ffb300","#ff5370","#ff9100"];
+const CHART_COLORS = ["#ffd600","#7c4dff","#00e676","#ffb300","#ff5370","#ff9100"];
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
