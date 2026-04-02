@@ -127,7 +127,7 @@ app.post('/api/upload', upload.array('files', 2000), (req, res) => {
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
-  const { sessionId, apiKey, language = "english", message, selectedFilePath, history = [] } = req.body;
+  const { sessionId, language = "english", message, selectedFilePath, history = [] } = req.body;
   if (!message) return res.status(400).json({ error: "Message is required" });
 
   const session = sessions.get(sessionId);
@@ -136,7 +136,7 @@ app.post('/api/chat', async (req, res) => {
   const langInstruction = composeLangInstruction(language);
 
   try {
-    const reply = await withFallbackModel(apiKey, async (model) => {
+    const reply = await withFallbackModel(undefined, async (model) => {
       let filesContext = "PROJECT FILES OVERVIEW:\n";
       session.files.forEach(f => { filesContext += `- ${f.path} (${f.lang}, ${f.lines} lines)\n`; });
       filesContext += "\n\n";
@@ -176,7 +176,7 @@ app.post('/api/chat', async (req, res) => {
 
 // ─── INTERVIEW QUESTIONS (File-Level) ─────────────────────────────────────────
 app.post('/api/interview', async (req, res) => {
-  const { sessionId, apiKey, language = "english", selectedFilePath } = req.body;
+  const { sessionId, language = "english", selectedFilePath } = req.body;
   if (!selectedFilePath) return res.status(400).json({ error: "File path is required" });
 
   const session = sessions.get(sessionId);
@@ -207,7 +207,7 @@ Each object must have:
 CODE FILE (${selected.lang} - ${selected.path}):
 ${selected.content.slice(0, 12000)}`;
 
-    const parsed = await withFallbackModel(apiKey, async (model) => {
+    const parsed = await withFallbackModel(undefined, async (model) => {
       const result = await model.generateContent(prompt);
       return JSON.parse(cleanJson(result.response.text()));
     });
@@ -221,7 +221,7 @@ ${selected.content.slice(0, 12000)}`;
 
 // ─── FINAL AI INTERVIEW QUESTIONS (Project-Wide) ──────────────────────────────
 app.post('/api/final-interview-questions', async (req, res) => {
-  const { sessionId, apiKey, language = "english" } = req.body;
+  const { sessionId, language = "english" } = req.body;
 
   const session = sessions.get(sessionId);
   if (!session) return res.status(404).json({ error: "Session not found." });
@@ -250,7 +250,7 @@ Each object must have:
 
 ${projectContext.slice(0, 40000)}`;
 
-    const parsed = await withFallbackModel(apiKey, async (model) => {
+    const parsed = await withFallbackModel(undefined, async (model) => {
       const result = await model.generateContent(prompt);
       return JSON.parse(cleanJson(result.response.text()));
     });
@@ -264,7 +264,7 @@ ${projectContext.slice(0, 40000)}`;
 
 // ─── REPORT (File-Level) ──────────────────────────────────────────────────────
 app.post('/api/report', async (req, res) => {
-  const { sessionId, apiKey, language = "english", selectedFilePath, qaPairs } = req.body;
+  const { sessionId, language = "english", selectedFilePath, qaPairs } = req.body;
   if (!qaPairs || qaPairs.length === 0) return res.status(400).json({ error: "QA pairs are required" });
 
   try {
@@ -305,7 +305,7 @@ Required structure:
 
 Be honest and strict. Scores must be integers 0-100.`;
 
-    const parsed = await withFallbackModel(apiKey, async (model) => {
+    const parsed = await withFallbackModel(undefined, async (model) => {
       const result = await model.generateContent(prompt);
       return JSON.parse(cleanJson(result.response.text()));
     });
@@ -319,7 +319,7 @@ Be honest and strict. Scores must be integers 0-100.`;
 
 // ─── FINAL INTERVIEW REPORT (Project-Wide) ────────────────────────────────────
 app.post('/api/final-interview-report', async (req, res) => {
-  const { sessionId, apiKey, language = "english", qaPairs } = req.body;
+  const { sessionId, language = "english", qaPairs } = req.body;
   if (!qaPairs || qaPairs.length === 0) return res.status(400).json({ error: "QA pairs are required" });
 
   const session = sessions.get(sessionId);
@@ -369,7 +369,7 @@ Required structure:
 
 Make questionScores match the number of questions. Scores must be integers 0-100. Grade: A+ (95+), A (90+), B+ (85+), B (80+), C+ (75+), C (70+), D (60+), F (<60).`;
 
-    const parsed = await withFallbackModel(apiKey, async (model) => {
+    const parsed = await withFallbackModel(undefined, async (model) => {
       const result = await model.generateContent(prompt);
       return JSON.parse(cleanJson(result.response.text()));
     });

@@ -112,7 +112,7 @@ function ReportView({ report, onRegenerate, loading, language = "english" }) {
 }
 
 // ── FINAL INTERVIEW MODAL ─────────────────────────────────────────────────────
-function FinalInterviewModal({ sessionId, apiKey, language = "english", onClose }) {
+function FinalInterviewModal({ sessionId, language = "english", onClose }) {
   const [stage, setStage] = useState("loading"); // loading | interview | report
   const [questions, setQuestions] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -129,7 +129,7 @@ function FinalInterviewModal({ sessionId, apiKey, language = "english", onClose 
       try {
         const r = await fetch(`${API}/api/final-interview-questions`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId, apiKey, language })
+          body: JSON.stringify({ sessionId, language })
         });
         const d = await parseApiResponse(r);
         if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
@@ -189,7 +189,7 @@ function FinalInterviewModal({ sessionId, apiKey, language = "english", onClose 
       }));
       const r = await fetch(`${API}/api/final-interview-report`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, apiKey, language, qaPairs })
+        body: JSON.stringify({ sessionId, language, qaPairs })
       });
       const d = await parseApiResponse(r);
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
@@ -413,8 +413,6 @@ function FinalReportPage({ report, onRestart, language = "english" }) {
 
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [apiKey, setApiKey] = useState(import.meta.env.VITE_GEMINI_API_KEY || "");
-  const [showKey, setShowKey] = useState(false);
   const [language, setLanguage] = useState("english"); // english | hinglish
   const [phase, setPhase] = useState("upload"); // upload | analyzing | results
   const [error, setError] = useState("");
@@ -518,7 +516,6 @@ export default function App() {
 
   // ── upload ─────────────────────────────────────────────────────────────────
   const processUpload = async (fileList) => {
-    if (!apiKey.trim()) { setError("Please enter your Gemini API key first."); return; }
     if (!fileList || fileList.length === 0) { setError("No files selected."); return; }
     setError(""); setPhase("analyzing"); setProgress(10); setCurrentStep(0); setLogs([]);
     log("Packing files…");
@@ -571,7 +568,7 @@ export default function App() {
     try {
       const res = await fetch(`${API}/api/chat`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, apiKey, language, message: msg, selectedFilePath: selFile?.path || null, history: chatHistory })
+        body: JSON.stringify({ sessionId, language, message: msg, selectedFilePath: selFile?.path || null, history: chatHistory })
       });
       const d = await parseApiResponse(res);
       if (!res.ok) throw new Error(d.error || `HTTP ${res.status}`);
@@ -589,7 +586,7 @@ export default function App() {
     try {
       const res = await fetch(`${API}/api/interview`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, apiKey, language, selectedFilePath: selFile.path })
+        body: JSON.stringify({ sessionId, language, selectedFilePath: selFile.path })
       });
       const d = await parseApiResponse(res);
       if (!res.ok) throw new Error(d.error || `HTTP ${res.status}`);
@@ -609,7 +606,7 @@ export default function App() {
     try {
       const res = await fetch(`${API}/api/report`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, apiKey, language, selectedFilePath: selFile.path, qaPairs })
+        body: JSON.stringify({ sessionId, language, selectedFilePath: selFile.path, qaPairs })
       });
       const d = await parseApiResponse(res);
       if (!res.ok) throw new Error(d.error || `HTTP ${res.status}`);
@@ -638,14 +635,6 @@ export default function App() {
         <div className="upload-sub">Upload your entire project folder. Get instant AI explanations, voice-led technical interview practice, and a comprehensive performance report — all in one workspace.</div>
 
         <div className="api-row">
-          <div className="api-label">Gemini API Key</div>
-          <div className="api-input-wrap">
-            <input className="api-input" type={showKey ? "text" : "password"} placeholder="AIza…" value={apiKey} onChange={e => setApiKey(e.target.value)} />
-            <button className="api-eye" onClick={() => setShowKey(s => !s)}>{showKey ? "🙈" : "👁"}</button>
-          </div>
-        </div>
-
-        <div className="api-row">
           <div className="api-label">Response Language</div>
           <div className="api-input-wrap" style={{ display: 'flex', gap: 8 }}>
             <select className="api-input" value={language} onChange={e => setLanguage(e.target.value)} style={{ width: '100%' }}>
@@ -669,7 +658,7 @@ export default function App() {
         </div>
 
         {error && <div className="error-box" style={{ marginTop: 16 }}>⚠ {error}</div>}
-        <button className="btn-main" disabled={!apiKey.trim()} onClick={() => fileRef.current?.click()}>
+        <button className="btn-main" onClick={() => fileRef.current?.click()}>
           ⚡ Upload & Analyze Project
         </button>
       </div></div></div>
@@ -729,7 +718,7 @@ export default function App() {
       </div></nav>
 
       {showFinalInterview && (
-        <FinalInterviewModal sessionId={sessionId} apiKey={apiKey} language={language} onClose={() => setShowFinalInterview(false)} />
+        <FinalInterviewModal sessionId={sessionId} language={language} onClose={() => setShowFinalInterview(false)} />
       )}
 
       <div className="wrap">
