@@ -4,7 +4,7 @@ import {
   Bar, BarChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from "recharts";
 
-const API = import.meta.env.VITE_API_URL || "";
+const API = import.meta.env.VITE_API_URL || window.location.origin;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const fileIcon = (lang) => {
