@@ -49,6 +49,13 @@ function composeLangInstruction(language) {
   return LANGUAGE_INSTRUCTIONS[(language || "english").toLowerCase()] || LANGUAGE_INSTRUCTIONS.english;
 }
 
+function addRoute(method, path, ...handlers) {
+  app[method](path, ...handlers);
+  if (path.startsWith('/api/')) {
+    app[method](path.slice(4), ...handlers);
+  }
+}
+
 function isModelFallbackError(err) {
   if (!err || !err.message) return false;
   const m = err.message.toLowerCase();
@@ -85,7 +92,7 @@ function cleanJson(raw) {
   return cleaned.trim();
 }
 
-app.post('/api/upload', upload.array('files', 2000), (req, res) => {
+addRoute('post', '/api/upload', upload.array('files', 2000), (req, res) => {
   try {
     const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
     const files = req.files
@@ -116,7 +123,7 @@ app.post('/api/upload', upload.array('files', 2000), (req, res) => {
   }
 });
 
-app.post('/api/chat', async (req, res) => {
+addRoute('post', '/api/chat', async (req, res) => {
   const { sessionId, language = 'english', message, selectedFilePath, history = [] } = req.body;
   if (!message) return res.status(400).json({ error: 'Message is required' });
 
@@ -168,7 +175,7 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-app.post('/api/interview', async (req, res) => {
+addRoute('post', '/api/interview', async (req, res) => {
   const { sessionId, language = 'english', selectedFilePath } = req.body;
   if (!selectedFilePath) return res.status(400).json({ error: 'File path is required' });
 
@@ -199,7 +206,7 @@ app.post('/api/interview', async (req, res) => {
   }
 });
 
-app.post('/api/final-interview-questions', async (req, res) => {
+addRoute('post', '/api/final-interview-questions', async (req, res) => {
   const { sessionId, language = 'english' } = req.body;
   const session = sessions.get(sessionId);
   if (!session) return res.status(404).json({ error: 'Session not found.' });
@@ -231,7 +238,7 @@ app.post('/api/final-interview-questions', async (req, res) => {
   }
 });
 
-app.post('/api/report', async (req, res) => {
+addRoute('post', '/api/report', async (req, res) => {
   const { sessionId, language = 'english', selectedFilePath, qaPairs } = req.body;
   if (!qaPairs || qaPairs.length === 0) return res.status(400).json({ error: 'QA pairs are required' });
 
@@ -256,7 +263,7 @@ app.post('/api/report', async (req, res) => {
   }
 });
 
-app.post('/api/final-interview-report', async (req, res) => {
+addRoute('post', '/api/final-interview-report', async (req, res) => {
   const { sessionId, language = 'english', qaPairs } = req.body;
   if (!qaPairs || qaPairs.length === 0) return res.status(400).json({ error: 'QA pairs are required' });
 
