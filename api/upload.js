@@ -1,13 +1,11 @@
 import multer from 'multer';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
-
 const CODE_EXT = new Set([
   ".js",".jsx",".ts",".tsx",".py",".java",".cpp",".c",".cs",".go",".rs",
   ".php",".rb",".swift",".kt",".html",".css",".json",".xml",".yaml",".yml",
   ".md",".sh",".sql",".vue",".svelte",".dart",".scala",".r",".h",".hpp"
 ]);
-
 const LANG_MAP = {
   ".js":"JS",".jsx":"JSX",".ts":"TS",".tsx":"TSX",".py":"Python",".java":"Java",
   ".cpp":"C++",".c":"C",".cs":"C#",".go":"Go",".rs":"Rust",".php":"PHP",
@@ -52,11 +50,7 @@ export default async function handler(req, res) {
     });
 
     const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-    res.status(200).json({
-      sessionId,
-      files: files.map((f) => ({ path: f.path, name: f.name, dir: f.dir, lang: f.lang, lines: f.lines, size: f.size }))
-    });
+    res.status(200).json({ sessionId, files: files.map((f) => ({ path: f.path, name: f.name, dir: f.dir, lang: f.lang, lines: f.lines, size: f.size })) });
   } catch (err) {
     console.error('Upload error:', err);
     res.status(500).json({ error: 'Failed to process files: ' + err.message });
