@@ -1,8 +1,12 @@
 {
   "version": 3,
+  "builds": [
+    { "src": "package.json", "use": "@vercel/static-build" }
+  ],
   "functions": {
     "api/**/*.js": {
       "runtime": "nodejs18.x"
     }
-  }
+  },
+  "outputDirectory": "dist"
 }
