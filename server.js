@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import dotenv from 'dotenv';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 
 dotenv.config();
 
@@ -15,7 +15,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 // In-memory store for sessions
 const sessions = new Map();
 
-const DEFAULT_KEY = process.env.GEMINI_API_KEY || "";
+const DEFAULT_KEY = process.env.GROQ_API_KEY || "";
 
 const CODE_EXT = new Set([
   ".js",".jsx",".ts",".tsx",".py",".java",".cpp",".c",".cs",".go",".rs",
@@ -38,11 +38,9 @@ function getLang(name) {
 
 const MODEL_CANDIDATES = [
   process.env.GENERATIVE_MODEL,
-  "gemini-2.5-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5",
-  "text-bison@002",
-  "text-bison@001"
+  "mixtral-8x7b-32768",
+  "llama-3.1-70b-versatile",
+  "llama-3.1-8b-instant"
 ].filter(Boolean);
 
 const LANGUAGE_INSTRUCTIONS = {
@@ -62,13 +60,12 @@ function isModelFallbackError(err) {
 
 async function withFallbackModel(apiKey, handler) {
   const key = apiKey || DEFAULT_KEY;
-  const genAI = new GoogleGenerativeAI(key);
+  const groq = new Groq({ apiKey: key });
   let lastErr = null;
 
   for (const candidate of MODEL_CANDIDATES) {
     try {
-      const model = genAI.getGenerativeModel({ model: candidate });
-      const result = await handler(model, candidate);
+      const result = await handler(groq, candidate);
       return result;
     } catch (err) {
       lastErr = err;
@@ -136,7 +133,7 @@ app.post('/api/chat', async (req, res) => {
   const langInstruction = composeLangInstruction(language);
 
   try {
-    const reply = await withFallbackModel(undefined, async (model) => {
+    const reply = await withFallbackModel(undefined, async (groq, model) => {
       let filesContext = "PROJECT FILES OVERVIEW:\n";
       session.files.forEach(f => { filesContext += `- ${f.path} (${f.lang}, ${f.lines} lines)\n`; });
       filesContext += "\n\n";
@@ -155,16 +152,20 @@ app.post('/api/chat', async (req, res) => {
 
       const systemPrompt = `You are PROJECT-HELPER, an expert senior software engineer and AI code analyst. ${langInstruction} You have deeply analyzed the user's codebase. Format your responses clearly with sections, bullet points, and code snippets where relevant. Be thorough, insightful, and help the user truly understand their code.\n\n${filesContext}`;
 
-      const chat = model.startChat({
-        history: [
-          { role: "user", parts: [{ text: systemPrompt }] },
-          { role: "model", parts: [{ text: "I've thoroughly reviewed the codebase. I'm ready to help you understand any aspect of it — architecture, logic, patterns, or specific files. What would you like to explore?" }] },
-          ...history.map(h => ({ role: h.role, parts: [{ text: h.text }] }))
-        ]
-      });
+      const messages = [
+        { role: "user", content: systemPrompt },
+        { role: "assistant", content: "I've thoroughly reviewed the codebase. I'm ready to help you understand any aspect of it — architecture, logic, patterns, or specific files. What would you like to explore?" },
+        ...history.map(h => ({ role: h.role === "model" ? "assistant" : "user", content: h.text }))
+      ];
+      messages.push({ role: "user", content: message });
 
-      const result = await chat.sendMessage([{ text: message }]);
-      return result.response.text();
+      const response = await groq.chat.completions.create({
+        model: model,
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 2048
+      });
+      return response.choices[0].message.content;
     });
 
     res.json({ reply });
@@ -207,9 +208,14 @@ Each object must have:
 CODE FILE (${selected.lang} - ${selected.path}):
 ${selected.content.slice(0, 12000)}`;
 
-    const parsed = await withFallbackModel(undefined, async (model) => {
-      const result = await model.generateContent(prompt);
-      return JSON.parse(cleanJson(result.response.text()));
+    const parsed = await withFallbackModel(undefined, async (groq, model) => {
+      const response = await groq.chat.completions.create({
+        model: model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 3000
+      });
+      return JSON.parse(cleanJson(response.choices[0].message.content));
     });
 
     res.json({ questions: parsed });
@@ -250,9 +256,14 @@ Each object must have:
 
 ${projectContext.slice(0, 40000)}`;
 
-    const parsed = await withFallbackModel(undefined, async (model) => {
-      const result = await model.generateContent(prompt);
-      return JSON.parse(cleanJson(result.response.text()));
+    const parsed = await withFallbackModel(undefined, async (groq, model) => {
+      const response = await groq.chat.completions.create({
+        model: model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 3000
+      });
+      return JSON.parse(cleanJson(response.choices[0].message.content));
     });
 
     res.json({ questions: parsed });
@@ -305,9 +316,14 @@ Required structure:
 
 Be honest and strict. Scores must be integers 0-100.`;
 
-    const parsed = await withFallbackModel(undefined, async (model) => {
-      const result = await model.generateContent(prompt);
-      return JSON.parse(cleanJson(result.response.text()));
+    const parsed = await withFallbackModel(undefined, async (groq, model) => {
+      const response = await groq.chat.completions.create({
+        model: model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 3000
+      });
+      return JSON.parse(cleanJson(response.choices[0].message.content));
     });
 
     res.json(parsed);
@@ -369,9 +385,14 @@ Required structure:
 
 Make questionScores match the number of questions. Scores must be integers 0-100. Grade: A+ (95+), A (90+), B+ (85+), B (80+), C+ (75+), C (70+), D (60+), F (<60).`;
 
-    const parsed = await withFallbackModel(undefined, async (model) => {
-      const result = await model.generateContent(prompt);
-      return JSON.parse(cleanJson(result.response.text()));
+    const parsed = await withFallbackModel(undefined, async (groq, model) => {
+      const response = await groq.chat.completions.create({
+        model: model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 4000
+      });
+      return JSON.parse(cleanJson(response.choices[0].message.content));
     });
     res.json(parsed);
   } catch (err) {
