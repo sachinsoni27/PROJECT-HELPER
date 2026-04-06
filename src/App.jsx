@@ -627,7 +627,6 @@ export default function App() {
       <div className="grid-bg" />
       <nav className="nav"><div className="nav-inner">
         <div className="nav-logo">PROJECT<span>-HELPER</span></div>
-        <div className="nav-pill" style={{ color: "var(--cyan)", borderColor: "var(--cyan)", background: "var(--cyan-dim)" }}>✦ Gemini Powered</div>
       </div></nav>
       <div className="wrap"><div className="upload-screen"><div className="upload-box">
         <div className="upload-tag">AI-Powered Code Intelligence Platform</div>
