@@ -1,7 +1,8 @@
 {
   "version": 3,
   "builds": [
-    { "src": "package.json", "use": "@vercel/static-build" }
+    { "src": "package.json", "use": "@vercel/static-build" },
+    { "src": "api/upload.js", "use": "@vercel/node" }
   ],
   "outputDirectory": "dist"
 }
