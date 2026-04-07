@@ -38,8 +38,6 @@ function getLang(name) {
 
 const MODEL_CANDIDATES = [
   process.env.GENERATIVE_MODEL,
-  "mixtral-8x7b-32768",
-  "llama-3.1-70b-versatile",
   "llama-3.1-8b-instant"
 ].filter(Boolean);
 
@@ -52,10 +50,24 @@ function composeLangInstruction(language) {
   return LANGUAGE_INSTRUCTIONS[(language || "english").toLowerCase()] || LANGUAGE_INSTRUCTIONS.english;
 }
 
+function extractErrorMessage(err) {
+  if (!err) return "";
+  if (typeof err === "string") return err;
+  if (err.message) return err.message;
+  if (err.response?.data) {
+    if (typeof err.response.data === "string") return err.response.data;
+    if (err.response.data.error?.message) return err.response.data.error.message;
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 function isModelFallbackError(err) {
-  if (!err || !err.message) return false;
-  const m = err.message.toLowerCase();
-  return m.includes("not found") || m.includes("unsupported") || m.includes("invalid model") || m.includes("404");
+  const message = extractErrorMessage(err).toLowerCase();
+  return /not found|unsupported|invalid model|404|decommissioned|deprecated/.test(message);
 }
 
 async function withFallbackModel(apiKey, handler) {
