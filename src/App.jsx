@@ -519,17 +519,30 @@ export default function App() {
     if (!fileList || fileList.length === 0) { setError("No files selected."); return; }
     setError(""); setPhase("analyzing"); setProgress(10); setCurrentStep(0); setLogs([]);
     log("Packing files…");
+    const CODE_EXT = new Set([
+      ".js",".jsx",".ts",".tsx",".py",".java",".cpp",".c",".cs",".go",".rs",
+      ".php",".rb",".swift",".kt",".html",".css",".json",".xml",".yaml",".yml",
+      ".md",".sh",".sql",".vue",".svelte",".dart",".scala",".r",".h",".hpp"
+    ]);
     const fd = new FormData();
     let fileCount = 0;
+    let totalSize = 0;
     for (let i = 0; i < fileList.length; i++) {
       const f = fileList[i];
       const p = f.webkitRelativePath || f.name || "";
       if (p.includes("node_modules") || p.includes(".git") || p.includes(".next") || p.includes("dist") || p.includes(".cache")) continue;
-      if (f.size > 20 * 1024 * 1024) continue; // skip files > 20MB client-side
+      const ext = f.name.includes('.') ? f.name.slice(f.name.lastIndexOf('.')).toLowerCase() : '';
+      if (!CODE_EXT.has(ext)) continue;
+      if (f.size > 2 * 1024 * 1024) continue; // skip massive individual files
+      if (totalSize + f.size > 4.2 * 1024 * 1024) {
+        log(`⚠ Warning: Vercel 4.5MB payload limit reached. Skipping remaining files...`);
+        break;
+      }
+      totalSize += f.size;
       fd.append("files", f);
       fileCount++;
     }
-    if (fileCount === 0) { setError("No valid files found (all were skipped or inside node_modules/.git)."); setPhase("upload"); return; }
+    if (fileCount === 0) { setError("No valid code files found under the size limits."); setPhase("upload"); return; }
     try {
       setCurrentStep(1); setProgress(35);
       log(`Uploading ${fileCount} files to backend…`);
